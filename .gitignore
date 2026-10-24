@@ -3,9 +3,24 @@ local_paths.json
 output/
 **/build/
 compile_commands.json
+
+# CCES IDE build trees (objects, dxe, makefiles, maps)
+Debug/
+Release/
+
+# CCES headless / IDE build logs
+_cces_*.log*
+
 *.dxe
+*.ldr
+*.doj
+*.dlb
+*.o
+*.d
 *.ldf
 *.map
+*.map.xml
+*.map.html
 *.xml.bak
 .DS_Store
 Thumbs.db

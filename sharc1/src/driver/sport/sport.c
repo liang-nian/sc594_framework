@@ -121,7 +121,7 @@ static void PublishAudioStat(void) {
   st->magic = AUDIO_STAT_MAGIC;
   flush_data_buffer((void *)st,
                     (uint8_t *)st + sizeof(AudioStat) - 1u,
-                    FLUSH_DATA_BUFFER_NO_INV);
+                    ADI_FLUSH_DATA_NOINV);
 };
 
 static void Buf0Process(void) {

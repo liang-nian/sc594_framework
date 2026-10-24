@@ -1,7 +1,9 @@
+#include <stddef.h>
 #include <stdint.h>
 
 #include "ad2428.h"
 #include "ad2428_reg.h"
+#include "adau1962/adau1962.h"
 #include "log/log.h"
 #include "twi/twi.h"
 
@@ -87,10 +89,14 @@ static void Ad2428Cfg(uint8_t master_dev, Ad2428Reg* cfg, uint32_t cfg_len,
       rd_val = Twi2DevRegShtRd(i2c_addr, (uint8_t)reg);
       (void)rd_val;
     } else if (a2b_cmd == DELAY) {
-      if (val_len == 2u) {
-        delay_val = val_ptr[1];
-      } else {
+      /* SigmaStudio: 1 byte, or a 16-bit big-endian delay.
+       * val_ptr[1] alone drops the high byte. This table is 1-byte. */
+      if (val_len == 2u && val_ptr != NULL) {
+        delay_val = ((uint32_t)val_ptr[0] << 8) | val_ptr[1];
+      } else if (val_len >= 1u && val_ptr != NULL) {
         delay_val = val_ptr[0];
+      } else {
+        delay_val = 0u;
       }
       Ad2428CfgDelay(delay_val);
       if (i == 1) {
@@ -145,6 +151,17 @@ void Ad24281Mon(void) {
 }
 
 void Ad24280Init(void) {
+  /* USBi is an I2C master on TWI2 and does not generate BCLK/FS.
+   * Discovery needs the DAC clock master locked, and this core as the
+   * only TWI2 master. Unplug USBi before this call. */
+  if (!Adau1962ClkReady()) {
+    ShtLog("ad24280 skipped: dac bclk/fs not locked.\n");
+    return;
+  }
+  if (!Twi2IsIdle()) {
+    ShtLog("ad24280 skipped: twi2 busy.\n");
+    return;
+  }
   Twi2Open();
   Ad2428Cfg(AD24280_MASTER_DEV, ad24280_cfg, AD24280_CFG_LEN, &ad24280_mon);
   Twi2Stop();

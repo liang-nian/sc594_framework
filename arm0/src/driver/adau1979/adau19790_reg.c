@@ -5,8 +5,8 @@ Adau1979Reg adau19790_cfg[ADAU19790_CFG_LEN] = {
   {ADAU1979_REG_MICBIAS, 0x00},
   // Fs pol rising pulse, tx rising bclk, mute all.
   {ADAU1979_REG_BLOCK_POWER_SAI, 0x70},
-  // 48 kHz fs, tdm16 23(tdm8 1B).
-  {ADAU1979_REG_SAI_CTRL0, 0x23},
+  /* SAI=100 (TDM16), FS=010 (32–48 kHz). FS=011 would be 64–96 kHz. */
+  {ADAU1979_REG_SAI_CTRL0, 0x22},
   {ADAU1979_REG_SAI_CTRL1, 0x08},
   {ADAU1979_REG_CMAP12, 0x01},
   {ADAU1979_REG_CMAP34, 0x23},

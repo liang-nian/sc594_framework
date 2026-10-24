@@ -1,4 +1,5 @@
 #include <services/tmr/adi_tmr.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #include "timer.h"
@@ -43,6 +44,10 @@ void Tmr0Init(void) {
   adi_tmr_Open(TMR0_DEV, tmr0_mem, ADI_TMR_MEMORY, Tmr0Callback, NULL,
                &tmr0_dev);
   Tmr0Cfg();
+  /* Tmr0Cfg only fills tmr0_cfg. The driver copies it in adi_tmr_Config.
+   * Enable without that call runs the reset period, so Uart0Poll never
+   * arrives at 1 ms. */
+  adi_tmr_Config(tmr0_dev, &tmr0_cfg);
   adi_tmr_Enable(tmr0_dev, true);
 }
 

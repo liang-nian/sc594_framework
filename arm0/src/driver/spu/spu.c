@@ -1,4 +1,5 @@
 #include <services/spu/adi_spu.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #include "spu.h"

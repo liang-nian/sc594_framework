@@ -19,7 +19,7 @@
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-				<configuration artifactName="${ProjName}" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe" buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.exe,org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.debug" cleanCommand="clean" description="" errorParsers="org.eclipse.cdt.core.GmakeErrorParser;com.analog.crosscore.core.CCESARMErrorParser" id="arm.toolchain.bare.target.exe.debug.271533314" name="Debug" parent="arm.toolchain.bare.target.exe.debug">
+				<configuration artifactName="${ProjName}" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe" buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.exe,org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.debug" cleanCommand="clean" description="" errorParsers="org.eclipse.cdt.core.GmakeErrorParser;com.analog.crosscore.core.CCESARMErrorParser" id="arm.toolchain.bare.target.exe.debug.271533314" name="Debug" parent="arm.toolchain.bare.target.exe.debug" postannouncebuildStep="post_build" postbuildStep="elfloader -proc ADSP-SC594 -si-revision 0.0 -b SPI -f BINARY -Width 8 -o sc594_framework.ldr -core0=arm0 -core1=../../sharc1/Debug/sharc1.dxe -core2=../../sharc2/Debug/sharc2.dxe &amp; python ../../post_build.py">
 					<folderInfo id="arm.toolchain.bare.target.exe.debug.271533314." name="/" resourcePath="">
 						<toolChain id="arm.bare.toolchain.exe.debug.1540637654" name="CrossCore ARM Bare-Metal Toolchain" superClass="arm.bare.toolchain">
 							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="arm.toolchain.platform.base.348177774" name="Development Platform" osList="all" superClass="arm.toolchain.platform.base"/>
@@ -37,7 +37,6 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/system}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/driver}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/algo}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/../common&quot;"/>
 								</option>
 								<inputType id="arm.toolchain.assembler.base.input.292363167" superClass="arm.toolchain.assembler.base.input"/>
 							</tool>
@@ -57,12 +56,12 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/system}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/driver}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/algo}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/../common&quot;"/>
 								</option>
 								<inputType id="arm.toolchain.bare.c.input.17097366" name="C Source" superClass="arm.toolchain.bare.c.input"/>
 							</tool>
 							<tool id="arm.toolchain.bare.c.linker.1633276291" name="CrossCore ARM Bare Metal C Linker" superClass="arm.toolchain.bare.c.linker">
 								<option defaultValue="true" id="arm.c.linker.debuglibs.1949446295" name="Use debug system libraries (-mdebug-libs)" superClass="arm.c.linker.debuglibs" valueType="boolean"/>
+								<option id="arm.linker.option.gensymbolmap.1949446296" name="Generate symbol map (-Wl,-Map)" superClass="arm.linker.option.gensymbolmap" value="true" valueType="boolean"/>
 								<option id="arm.linker.option.proc.165124299" name="-mproc" superClass="arm.linker.option.proc" value=" ADSP-SC594" valueType="string"/>
 								<option id="arm.linker.option.sirevision.275817695" name="-msi-revision" superClass="arm.linker.option.sirevision" value=" 0.0" valueType="string"/>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="arm.linker.option.preprocessdefs.2121906370" name="Preprocessor definitions (-D):" superClass="arm.linker.option.preprocessdefs" valueType="definedSymbols">
@@ -149,7 +148,6 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/system}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/driver}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/algo}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/../common&quot;"/>
 								</option>
 								<inputType id="arm.toolchain.assembler.base.input.1965866280" superClass="arm.toolchain.assembler.base.input"/>
 							</tool>
@@ -169,7 +167,6 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/system}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/driver}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/algo}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/../common&quot;"/>
 								</option>
 								<inputType id="arm.toolchain.bare.c.input.1005429795" name="C Source" superClass="arm.toolchain.bare.c.input"/>
 							</tool>

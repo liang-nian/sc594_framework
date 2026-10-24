@@ -9,8 +9,8 @@
  *
  * Address is the last 256 bytes of the ARM uncached L2 window
  * (apt.c: 0x20025000..0x2003FFFF). The linker does not place any
- * other object in that tail. Both cores use this absolute address;
- * MCAPI is left for larger messages.
+ * other object in that tail. Both cores use this absolute address.
+ * The same layout is in sharc1/src/driver/audio_stat.h.
  */
 #define AUDIO_STAT_ADDR  (0x2003FF00u)
 #define AUDIO_STAT_MAGIC (0xA5A500CCu)

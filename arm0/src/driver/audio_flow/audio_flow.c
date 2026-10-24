@@ -15,7 +15,8 @@
  *
  * Order is the 21593 order with SPORT DMA removed (that starts on SHARC1
  * only after adi_core_enable, so clocks already exist):
- *   pinmux, SPU, timer, UART, U6 switch, SRU, ADAU1962, ADAU1979, AD24280.
+ *   pinmux, SPU, UART, timer, U6 switch, SRU, ADAU1962, ADAU1979, AD24280.
+ * UART RX DMA is armed before TMR0. The 1 ms callback is Uart0Poll.
  *
  * USBi / A2B rule: BCLK and FS must be running before any A2B I2C, and the
  * firmware must not hold TWI2 while USBi is plugged in. ADAU1962 is the
@@ -35,8 +36,8 @@ static void AudioStatClear(void) {
 void AudioCtrlInit(void) {
   BoardPinmux();
   Spu0Init();
-  Tmr0Init();
   Uart0Init();
+  Tmr0Init();
   Sw0Init();
   SruInit();
   Adau19620Init();

@@ -1,4 +1,5 @@
 #include <drivers/uart/adi_uart.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
@@ -76,19 +77,52 @@ static void Uart0Callback(void* param, uint32_t event, void* arg) {
 }
 
 void Uart0Poll(void) {
-  uint32_t cur_wr_idx = UART0_RX_DMA_CUR_XCNT;
+  uint32_t xcnt = UART0_RX_DMA_CUR_XCNT;
+  uint32_t cur_wr_idx;
+  uint32_t old_wr = uart0_msg.rx_wr_idx;
   uint32_t rd_idx = uart0_msg.rx_rd_idx;
   uint8_t is_overrun = 0u;
-  cur_wr_idx = DMA_LEN - cur_wr_idx;
-  is_overrun |= (uart0_msg.rx_wr_idx < rd_idx &&
-                cur_wr_idx > rd_idx);
-  is_overrun |= (uart0_msg.rx_wr_idx < rd_idx &&
-                cur_wr_idx < uart0_msg.rx_wr_idx);
-  is_overrun |= (uart0_msg.rx_wr_idx >= rd_idx &&
-                cur_wr_idx >= uart0_msg.rx_wr_idx &&
-                cur_wr_idx < uart0_msg.rx_wr_idx);
+
+  /* XCNT counts down and can read 0 at the wrap. DMA_LEN - 0 is past
+   * the buffer; that sample belongs at index 0. */
+  if (xcnt > DMA_LEN) {
+    xcnt = DMA_LEN;
+  }
+  cur_wr_idx = DMA_LEN - xcnt;
+  if (cur_wr_idx == DMA_LEN) {
+    cur_wr_idx = 0u;
+  }
+
+  if (cur_wr_idx != old_wr) {
+    if (old_wr < rd_idx) {
+      if (cur_wr_idx > rd_idx || cur_wr_idx < old_wr ||
+          cur_wr_idx == rd_idx) {
+        is_overrun = 1u;
+      }
+    } else if (cur_wr_idx < old_wr && cur_wr_idx > rd_idx) {
+      /* Reader was at or behind the writer, and the pointer wrapped
+       * past rd. (cur >= old && cur < old) can never be true. */
+      is_overrun = 1u;
+    } else if (cur_wr_idx == rd_idx) {
+      /* Landing on the reader aliases the empty check, so those bytes
+       * would be dropped. */
+      is_overrun = 1u;
+    }
+  }
   uart0_msg.overrun_cnt += is_overrun;
   uart0_msg.rx_wr_idx = cur_wr_idx;
+}
+
+static uint8_t Uart0WaitTx(void) {
+  uint32_t timer = TIME_BND;
+
+  while (!uart0_msg.is_tx_over) {
+    timer--;
+    if (!timer) {
+      return 1u;
+    }
+  }
+  return 0u;
 }
 
 uint8_t Uart0Rd(uint8_t* val) {
@@ -106,13 +140,12 @@ uint8_t Uart0Rd(uint8_t* val) {
 }
 
 uint8_t Uart0Wr(uint8_t* val, uint32_t len) {
-  uint32_t timer = TIME_BND;
+  if (val == NULL || len == 0u) {
+    return 0u;
+  }
   while (len > DMA_LEN) {
-    while (!uart0_msg.is_tx_over) {
-      timer--;
-      if (!timer) {
-        return 1u;
-      }
+    if (Uart0WaitTx() != 0u) {
+      return 1u;
     }
     uart0_msg.is_tx_over = 0u;
     memcpy(uart0_tx_buf, val, DMA_LEN);
@@ -121,11 +154,13 @@ uint8_t Uart0Wr(uint8_t* val, uint32_t len) {
     len -= DMA_LEN;
     val += DMA_LEN;
   }
-  while (!uart0_msg.is_tx_over) {
-    timer--;
-    if (!timer) {
-      return 1u;
-    }
+  /* A multiple of DMA_LEN is already queued. XCount 0 never raises
+   * TX_PROCESSED, so is_tx_over would stay 0 and later writes time out. */
+  if (len == 0u) {
+    return 0u;
+  }
+  if (Uart0WaitTx() != 0u) {
+    return 1u;
   }
   uart0_msg.is_tx_over = 0u;
   memcpy(uart0_tx_buf, val, len);

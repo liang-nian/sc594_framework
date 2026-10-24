@@ -14,7 +14,7 @@
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-				<configuration artifactName="${ProjName}" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe" buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.exe,com.analog.crosscore.managedbuilder.buildType=com.analog.crosscore.managedbuilder.buildType.debug" cleanCommand="clean" description="" id="sharc.toolchain.configuration.debug.567336602" name="Debug" parent="sharc.toolchain.configuration.debug">
+				<configuration artifactName="${ProjName}" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe" buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.exe,com.analog.crosscore.managedbuilder.buildType=com.analog.crosscore.managedbuilder.buildType.debug" cleanCommand="clean" description="" id="sharc.toolchain.configuration.debug.567336602" name="Debug" parent="sharc.toolchain.configuration.debug" postannouncebuildStep="post_build" postbuildStep="python ../../post_build.py">
 					<folderInfo id="sharc.toolchain.configuration.debug.567336602." name="/" resourcePath="">
 						<toolChain id="sharc.toolchain.debug.1818510295" isAbstract="false" name="CrossCore SHARC Toolchain" superClass="sharc.toolchain">
 							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="sharc.platform.442826982" name="CrossCore SHARC Target Platform" osList="all" superClass="sharc.platform"/>
@@ -51,6 +51,7 @@
 							</tool>
 							<tool id="sharc.toolchain.linker.1537385030" name="CrossCore SHARC Linker" superClass="sharc.toolchain.linker">
 								<option id="linker.option.individmap.1924894350" name="Individually map functions and data items (-ip)" superClass="linker.option.individmap" useByScannerDiscovery="false" value="false" valueType="boolean"/>
+								<option id="linker.option.gensymbolmap.1924894351" name="Generate symbol map (-map)" superClass="linker.option.gensymbolmap" value="true" valueType="boolean"/>
 								<option id="linker.option.eliminateunused.1592787402" name="Eliminate unused objects (-e)" superClass="linker.option.eliminateunused" useByScannerDiscovery="false"/>
 								<option id="linker.option.usedbglib.511093942" name="Use Debug System libraries (-add-debug-libpaths)" superClass="linker.option.usedbglib" useByScannerDiscovery="false"/>
 								<option id="linker.option.proc.696858739" name="-proc" superClass="linker.option.proc" value=" ADSP-SC594" valueType="string"/>
