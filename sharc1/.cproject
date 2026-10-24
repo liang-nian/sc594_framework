@@ -30,6 +30,8 @@
 								</option>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="assembler.option.additionaldirectories.847546102" name="Additional include directories (-I):" superClass="assembler.option.additionaldirectories" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/system}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/driver}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/../common&quot;"/>
 								</option>
 								<inputType id="assembler.input.1149832815" name="Assembler Source" superClass="assembler.input"/>
 							</tool>
@@ -46,6 +48,8 @@
 								<option id="compiler.option.coreid.1763677884" name="Specify the core Id (-DCORE[A|B|0-2])" superClass="compiler.option.coreid" value="1" valueType="string"/>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="compiler.option.additionaldirectories.762632982" name="Additional include directories (-I):" superClass="compiler.option.additionaldirectories" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/system}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/driver}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/../common&quot;"/>
 								</option>
 								<inputType id="compiler.inputType.317491316" name="C/C++ Source" superClass="compiler.inputType"/>
 							</tool>
@@ -117,6 +121,8 @@
 								</option>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="assembler.option.additionaldirectories.587607574" name="Additional include directories (-I):" superClass="assembler.option.additionaldirectories" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/system}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/driver}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/../common&quot;"/>
 								</option>
 								<inputType id="assembler.input.1362997919" name="Assembler Source" superClass="assembler.input"/>
 							</tool>
@@ -133,6 +139,8 @@
 								<option id="compiler.option.coreid.1555963530" name="Specify the core Id (-DCORE[A|B|0-2])" superClass="compiler.option.coreid" value="1" valueType="string"/>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="compiler.option.additionaldirectories.1074502914" name="Additional include directories (-I):" superClass="compiler.option.additionaldirectories" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/system}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/driver}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/../common&quot;"/>
 								</option>
 								<inputType id="compiler.inputType.604950988" name="C/C++ Source" superClass="compiler.inputType"/>
 							</tool>

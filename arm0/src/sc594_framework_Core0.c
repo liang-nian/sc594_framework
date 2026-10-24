@@ -1,5 +1,9 @@
 /*****************************************************************************
  * sc594_framework_Core0.c
+ *
+ * ARM core. Owns UART, TWI, and A2B/codec register configuration.
+ * SHARC1 is released only after BCLK/FS and the A2B script have finished,
+ * so SPORT DMA starts against a running clock.
  *****************************************************************************/
 
 #include "adi_initialize.h"
@@ -8,25 +12,29 @@
 #include <sys/platform.h>
 #include <sys/adi_core.h>
 
-int main()
+#include "audio_flow/audio_flow.h"
+#include "monitor/mon.h"
+
+int main(void)
 {
 	/**
-	 * Initialize managed drivers and/or services that have been added to 
-	 * the project.
-	 * @return zero on success 
+	 * Managed startup: GIC, generated pinmux (still empty), DAI pad enables,
+	 * MCAPI. Board UART/TWI mux is applied inside AudioCtrlInit().
 	 */
 	adi_initComponents();
-	
+
+	AudioCtrlInit();
+
 	/**
-	 * The default startup code does not include any functionality to allow
-	 * core 0 to enable core 1 and core 2. A convenient way to enable
-	 * core 1 and core 2 is to use the adi_core_enable function. 
+	 * Enable the SHARC cores after the control plane is up. SHARC1 then
+	 * opens SPORT DMA. SHARC2 stays the idle secondary core.
 	 */
 	adi_core_enable(ADI_CORE_SHARC0);
 	adi_core_enable(ADI_CORE_SHARC1);
 
-	/* Begin adding your custom code here */
+	while (1) {
+		MonTmp();
+	}
 
 	return 0;
 }
-
