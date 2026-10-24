@@ -1,0 +1,11 @@
+﻿# Local / build artifacts
+local_paths.json
+output/
+**/build/
+compile_commands.json
+*.dxe
+*.ldf
+*.map
+*.xml.bak
+.DS_Store
+Thumbs.db
