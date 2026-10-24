@@ -35,6 +35,9 @@
 								</option>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="arm.assembler.option.additionaldirectories.553031712" name="Additional include directories (-I):" superClass="arm.assembler.option.additionaldirectories" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/system}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/driver}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/algo}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/../common&quot;"/>
 								</option>
 								<inputType id="arm.toolchain.assembler.base.input.292363167" superClass="arm.toolchain.assembler.base.input"/>
 							</tool>
@@ -52,6 +55,9 @@
 								<option id="arm.toolchain.cpp.compiler.option.coreid.324014157" name="Specify the core Id (-DCORE[A|B|0-2])" superClass="arm.toolchain.cpp.compiler.option.coreid" value="0" valueType="string"/>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="arm.base.compiler.option.include.paths.1562280499" name="Additional include directories (-I):" superClass="arm.base.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/system}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/driver}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/algo}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/../common&quot;"/>
 								</option>
 								<inputType id="arm.toolchain.bare.c.input.17097366" name="C Source" superClass="arm.toolchain.bare.c.input"/>
 							</tool>
@@ -141,6 +147,9 @@
 								</option>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="arm.assembler.option.additionaldirectories.948283623" name="Additional include directories (-I):" superClass="arm.assembler.option.additionaldirectories" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/system}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/driver}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/algo}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/../common&quot;"/>
 								</option>
 								<inputType id="arm.toolchain.assembler.base.input.1965866280" superClass="arm.toolchain.assembler.base.input"/>
 							</tool>
@@ -158,6 +167,9 @@
 								<option id="arm.toolchain.cpp.compiler.option.coreid.2011536785" name="Specify the core Id (-DCORE[A|B|0-2])" superClass="arm.toolchain.cpp.compiler.option.coreid" value="0" valueType="string"/>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="arm.base.compiler.option.include.paths.2125376782" name="Additional include directories (-I):" superClass="arm.base.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/system}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/driver}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/algo}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/../common&quot;"/>
 								</option>
 								<inputType id="arm.toolchain.bare.c.input.1005429795" name="C Source" superClass="arm.toolchain.bare.c.input"/>
 							</tool>

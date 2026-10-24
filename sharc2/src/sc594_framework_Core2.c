@@ -20,8 +20,15 @@ int main(int argc, char *argv[])
 	 * @return zero on success 
 	 */
 	adi_initComponents();
-	
-	/* Begin adding your custom code here */
+
+	/*
+	 * Secondary DSP core. Matches the 21593 SHARC2 stub: no drivers.
+	 * UART, TWI, and A2B configuration are on ARM. SPORT and AudioProcess
+	 * are on SHARC1. This loop is the extension point for a second
+	 * algorithm core.
+	 */
+	while (1) {
+	}
 
 	return 0;
 }
