@@ -174,20 +174,9 @@ CPU 负载由 SHARC1 写到 **0x2003FF00**，ARM 在监视命令 `0xCC` 时读�
 
 UART 是异步串口，没有共享时钟线。最少两根线：
 
-```mermaid
-flowchart LR
-  tx[本机 TX] --> rxp[对端 RX]
-  txp[对端 TX] --> rx[本机 RX]
-  rts[本机 RTS 可选] -.-> ctsp[对端 CTS]
-  cts[本机 CTS 可选] -.-> rtsp[对端 RTS]
-```
+![UART 帧：空闲、起始、低位先发、可选校验、停止](fig/uart.svg)
 
-8N1 的一帧，空闲为高，低位先发：
-
-```mermaid
-flowchart LR
-  idle[空闲 1] --> start[起始 0] --> d0[D0] --> d1[D1] --> d2[D2] --> d3[D3] --> d4[D4] --> d5[D5] --> d6[D6] --> d7[D7] --> stop[停止 1]
-```
+图来自 [Wikimedia Commons: UART Frame.svg](https://commons.wikimedia.org/wiki/File:UART_Frame.svg)，AmenophisIII，公有领域（CC0）。`*` 是可选位。本工程是 8N1：D0–D7，无校验，1 个停止位。
 
 | 线 | 方向 | 作用 |
 |----|------|------|
@@ -250,29 +239,9 @@ DMA 描述符是 `ADI_PDMA_DESC_LIST`：`pStartAddr`、`XCount`、`XModify`、`p
 
 I2C 是同步总线，两根线，都是开漏，外部上拉：
 
-```mermaid
-flowchart LR
-  master[主机] --- scl[SCL 位时钟]
-  master --- sda[SDA 双向数据]
-  scl --- slave[从机]
-  sda --- slave
-  pu[上拉] --- scl
-  pu --- sda
-```
+![I2C 一次 7 位地址事务：START、地址、R/W、ACK、数据、STOP](fig/i2c.png)
 
-一次写寄存器，中间不重新寻址：
-
-```mermaid
-flowchart LR
-  start[START] --> addrw["地址 + W"] --> reg[寄存器地址] --> data[数据] --> stop[STOP]
-```
-
-读寄存器要先写地址，再用重复 START 转成读：
-
-```mermaid
-flowchart LR
-  start[START] --> addrw["地址 + W"] --> reg[寄存器地址] --> rs[重复 START] --> addrr["地址 + R"] --> data[数据] --> nak[NAK] --> stop[STOP]
-```
+图来自 [Wikimedia Commons: I2c 7bit telegram.png](https://commons.wikimedia.org/wiki/File:I2c_7bit_telegram.png)，VamosSandor，[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)，未改。地址和数据都是高位先发，ACK 由接收方拉低。
 
 | 线 | 作用 |
 |----|------|
@@ -502,20 +471,15 @@ flowchart LR
 
 TDM 是同步串行音频。至少三根线，多路数据时再加数据线：
 
-```mermaid
-flowchart LR
-  master[时钟主机] -->|BCLK| slave[从机]
-  master -->|FS| slave
-  master -->|D0| slave
-  master -->|D1 可选| slave
-```
+![TDM PCM short：FS 脉冲、bit shift、槽 1 到槽 n](fig/tdm.svg)
 
-TDM16 的一帧从 FS 开始，后面是 16 个槽：
+图是 ESP-IDF Programming Guide 的 TDM PCM short（Apache License 2.0），成图与 [esp-hal 随文档发布的图](https://github.com/esp-rs/esp-hal/blob/main/esp-hal/src/i2s/tdm_slot_pcm_short.svg) 相同。WS 是一个 BCLK 宽的脉冲，数据 MSB 比这个脉冲晚 1 个 BCLK。
 
-```mermaid
-flowchart LR
-  fs[FS 帧起点] --> s0[槽 0] --> s1[槽 1] --> s2[槽 2] --> sdots["..."] --> s15[槽 15]
-```
+经典 I2S 是只有左右两个槽的同步串行：
+
+![I2S Philips：左右槽，数据比 WS 晚 1 个 BCLK](fig/i2s.svg)
+
+图是同一份 ESP-IDF 文档里的 Standard Philips Timing Diagram，用文档页面加载的 WaveDrom 按原 JSON 生成。WS 占空比 50%，低电平是左声道，高电平是右声道，MSB 比 WS 边沿晚 1 个 BCLK。
 
 | 线 | 作用 |
 |----|------|
@@ -523,7 +487,7 @@ flowchart LR
 | FS | 帧同步。标出一帧的起点，帧内有固定个槽 |
 | D0、D1… | 数据。每个槽通常 32 个 BCLK，槽里是一个采样 |
 
-经典 I2S 是 TDM 的两槽特例：FS 是声道选择，左右声道各一个槽，数据相对 FS 晚一个 BCLK。本工程不是 I2S，是 TDM16：一帧 16 个槽，FS 是帧起点（early FS，数据不晚一拍），FS 高有效、边沿敏感。
+经典 I2S 是两个槽：FS 是声道选择，数据相对 FS 晚一个 BCLK。本工程不是 I2S，是 TDM16。上面的 PCM short 图把数据再晚 1 个 BCLK；本工程 SPORT 的 `bLateFS = false`，数据从 FS 这一拍开始，FS 高有效、边沿敏感。
 
 谁产生 BCLK/FS，谁就是时钟主机。从机只在约定的沿上采样。本工程全部 SPORT 都是从机，主机是 ADAU1962。沿必须和主机一致，否则整帧错一位。两根数据线表示两个独立的 TDM16 流，在同一个 BCLK/FS 下并行，合成 32 槽，不是把一帧加长到 32 个 BCLK 槽那么简单；SPORT 侧仍按 32 个槽窗口来收两根线。
 
