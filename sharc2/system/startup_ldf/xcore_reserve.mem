@@ -1,0 +1,11 @@
+/*
+ * Same reservation as sharc1/system/startup_ldf/xcore_reserve.mem.
+ * Not passed to -T. Keep 0x20038000..0x2003FFFF out of this core's
+ * output sections when app.ldf is regenerated.
+ */
+
+MEMORY
+{
+  mem_xcore_ctrl_bw  { TYPE(BW RAM) START(0x20038000) END(0x2003bfff) WIDTH(8) }
+  mem_xcore_audio_bw { TYPE(BW RAM) START(0x2003c000) END(0x2003ffff) WIDTH(8) }
+}

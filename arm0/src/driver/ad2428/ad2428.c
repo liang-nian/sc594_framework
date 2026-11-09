@@ -23,6 +23,32 @@ typedef struct Ad2428Msg {
 
 static Ad2428Msg ad24280_mon = {0};
 static Ad2428Msg ad24281_mon = {0};
+static uint8_t ad24280_ran;
+static uint8_t ad24281_ran;
+
+int Ad24281ScriptReady(void) {
+  /* A real SigmaStudio export has a master address and more than the
+   * placeholder record. The zero entry in ad24281_reg.c is not a script. */
+  if (AD24281_CFG_LEN < 2u) {
+    return 0;
+  }
+  if (ad24281_cfg[0].dev == 0u) {
+    return 0;
+  }
+  return 1;
+}
+
+uint32_t Ad24280NodeCount(void) {
+  return ad24280_mon.node_num;
+}
+
+int Ad24280ScriptRan(void) {
+  return ad24280_ran ? 1 : 0;
+}
+
+int Ad24281ScriptRan(void) {
+  return ad24281_ran ? 1 : 0;
+}
 
 static void Ad2428CfgDelay(uint32_t delay_val) {
   volatile uint32_t delay_cnt = delay_val * TIME_BND;
@@ -146,8 +172,15 @@ void Ad24280Mon(void) {
 }
 
 void Ad24281Mon(void) {
-  /* Carrier has one A2B master. Keep the symbol, do not touch the bus. */
+  /* Do not open TWI2. There is no second transceiver script to read. */
   (void)ad24281_mon;
+  if (!Ad24281ScriptReady()) {
+    ShtLog("ad24281 mon blocked: no script, TWI not opened.\n");
+    return;
+  }
+  Twi2Open();
+  Ad2428Mon(AD24281_MASTER_DEV, &ad24281_mon);
+  Twi2Stop();
 }
 
 void Ad24280Init(void) {
@@ -165,8 +198,29 @@ void Ad24280Init(void) {
   Twi2Open();
   Ad2428Cfg(AD24280_MASTER_DEV, ad24280_cfg, AD24280_CFG_LEN, &ad24280_mon);
   Twi2Stop();
+  ad24280_ran = 1u;
 }
 
 void Ad24281Init(void) {
-  ShtLog("ad24281 skipped: no 2nd A2B on EV-SOMCRR-EZKIT.\n");
+  if (!Ad24281ScriptReady()) {
+    ad24281_ran = 0u;
+    ShtLog("ad24281 blocked: EV-SOMCRR-EZKIT has one AD2428.\n");
+    ShtLog("ad24281 blocked: cfg len %u, first dev is 0, TWI left idle.\n",
+           (unsigned)AD24281_CFG_LEN);
+    ShtLog("ad24281 blocked: SPORT5 DMA is up, 0x%02x is not probed.\n",
+           (unsigned)AD24281_MASTER_DEV);
+    return;
+  }
+  if (!Adau1962ClkReady()) {
+    ShtLog("ad24281 skipped: dac bclk/fs not locked.\n");
+    return;
+  }
+  if (!Twi2IsIdle()) {
+    ShtLog("ad24281 skipped: twi2 busy.\n");
+    return;
+  }
+  Twi2Open();
+  Ad2428Cfg(AD24281_MASTER_DEV, ad24281_cfg, AD24281_CFG_LEN, &ad24281_mon);
+  Twi2Stop();
+  ad24281_ran = 1u;
 }

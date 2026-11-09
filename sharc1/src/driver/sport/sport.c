@@ -12,8 +12,8 @@
 
 #include "sport.h"
 #include "audio_flow/audio_flow.h"
-#include "audio_stat.h"
-#include <sys/cache.h>
+#include "xcore/xcore_sharc1.h"
+#include "../../../../common/xcore_abi.h"
 
 #define SP4A_DEV        (4u) /* DAI1 codec TX, was SPORT0A */
 #define SP4B_DEV        (4u) /* DAI1 codec RX, was SPORT0B */
@@ -113,16 +113,8 @@ float* a2b1_out(void) {
   return msg.a2b1_out_;
 };
 
-static void PublishAudioStat(void) {
-  AudioStat *st = (AudioStat *)AUDIO_STAT_ADDR;
-  st->cpu_load = msg.cpu_load_;
-  st->max_cpu_load = msg.max_cpu_load_;
-  st->ave_cpu_load = msg.ave_cpu_load_;
-  st->magic = AUDIO_STAT_MAGIC;
-  flush_data_buffer((void *)st,
-                    (uint8_t *)st + sizeof(AudioStat) - 1u,
-                    ADI_FLUSH_DATA_NOINV);
-};
+typedef char xcore_frame_matches[(FRAME_LEN == XCORE_FRAME_LEN) ? 1 : -1];
+typedef char xcore_lane_fits[((4u * FRAME_LEN) <= (TDM_A2B * FRAME_LEN)) ? 1 : -1];
 
 static void Buf0Process(void) {
   uint32_t i, j;
@@ -192,15 +184,47 @@ static void SpGroupCallback(void* app, uint32_t event, void* arg) {
 
 static void AudioCallBack(uint32_t iid) {
   uint64_t cnt;
+  uint64_t tot;
+  uint64_t wait;
+  uint32_t slot = 0u;
+  uint32_t seq = 0u;
+  int pushed;
+  static uint32_t frames;
+  static uint32_t misses;
 
+  (void)iid;
+  tot = __builtin_emuclk();
+  /* 21593 order: publish A2B0 channels 0-3, run this core's mix, then
+   * place SHARC2's result on DAC 8-11. Lane 1 is A2B1 channels 0-3 and
+   * comes back on SPORT5 TX. The wait is bounded and only runs once
+   * SHARC2 has attached. */
+  pushed = XcoreSharc1Push(msg.a2b0_in_, msg.a2b1_in_, &slot, &seq);
+  if (pushed == 0 && XcoreSharc2Ready()) {
+    adi_sec_Raise((uint32_t)INTR_SYS_SOFT0_INT);
+  }
   cnt = __builtin_emuclk();
   AudioProcess();
+  XcoreSharc1ApplyGain(msg.dac_out_);
   cnt = __builtin_emuclk() - cnt;
-  // Cpu load = cnt / period cnt * totalt load.
+  if (pushed == 0 && XcoreSharc2Ready()) {
+    wait = __builtin_emuclk();
+    for (;;) {
+      if (XcoreSharc1Pull(slot, seq, msg.dac_out_, msg.a2b1_out_) == 0) {
+        break;
+      }
+      if ((__builtin_emuclk() - wait) > XCORE_AUDIO_WAIT_CYCLES) {
+        misses += 1u;
+        break;
+      }
+    }
+  }
+  tot = __builtin_emuclk() - tot;
+  frames += 1u;
   msg.cpu_load_ = cnt / 1000.f;
   msg.max_cpu_load_ = fmaxf(msg.cpu_load_, msg.max_cpu_load_);
   msg.ave_cpu_load_ = EMA_K * msg.cpu_load_ + (1 - EMA_K) * msg.ave_cpu_load_;
-  PublishAudioStat();
+  XcoreSharc1NoteLoad(msg.cpu_load_, msg.max_cpu_load_, msg.ave_cpu_load_,
+                      tot / 1000.f, frames, misses, seq);
 };
 
 static void PrepareDesc(void){
