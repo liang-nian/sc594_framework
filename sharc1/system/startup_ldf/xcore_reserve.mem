@@ -1,0 +1,19 @@
+/*
+ * SHARC reservation for the ARM/SHARC shared windows.
+ *
+ * Named .mem because *.ldf is gitignored (CCES regenerates app.ldf).
+ * This file is not passed to -T. When app.ldf is regenerated, keep these
+ * ranges out of every SHARC output section. The default SC594 split in
+ * arm0/system/linker/app.ld already gives 0x20025000..0x2003FFFF to ARM
+ * and starts SHARC L2 at 0x20100000.
+ *
+ * Both SHARC images address the windows by the absolute bytes in
+ * common/xcore_abi.h. Do not add a second copy of the objects here.
+ * sharc2/system/startup_ldf/xcore_reserve.mem is the same map.
+ */
+
+MEMORY
+{
+  mem_xcore_ctrl_bw  { TYPE(BW RAM) START(0x20038000) END(0x2003bfff) WIDTH(8) }
+  mem_xcore_audio_bw { TYPE(BW RAM) START(0x2003c000) END(0x2003ffff) WIDTH(8) }
+}

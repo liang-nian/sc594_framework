@@ -32,9 +32,9 @@ CCES 工程名、枚举和职责不是同一套编号。`adi_core_enable` 用的
 
 | CCES 工程 | 编译宏 | `adi_core_id` | 职责 |
 |-----------|--------|----------------|------|
-| `arm0` | `CORE0` | ARM | 先启动。UART、TWI、pinmux、SPU、定时器、U6、SRU、codec 与 A2B 寄存器、串口监视 |
-| `sharc1` | `CORE1` | `ADI_CORE_SHARC0` | SPORT DMA 和 `AudioProcess` |
-| `sharc2` | `CORE2` | `ADI_CORE_SHARC1` | `adi_initComponents()` 之后空转，没有驱动 |
+| `arm0` | `CORE0` | ARM | 先启动。UART、TWI、pinmux、SPU、定时器、U6、SRU、codec 与 A2B 寄存器、串口监视。发布 `xcore` 控制块 |
+| `sharc1` | `CORE1` | `ADI_CORE_SHARC0` | 音频流的所有者。SPORT DMA、`AudioProcess`，把 A2B 车道交给 SHARC2 |
+| `sharc2` | `CORE2` | `ADI_CORE_SHARC1` | `INTR_SYS_SOFT0_INT` 里处理共享音频车道，并应答参数 |
 
 ARM `main` 的顺序：
 
@@ -43,14 +43,14 @@ ARM `main` 的顺序：
 3. `adi_core_enable(ADI_CORE_SHARC0)`，再 `adi_core_enable(ADI_CORE_SHARC1)`。
 4. `while (1) MonTmp();`
 
-SHARC1 被放开之后才 `SpInit()`。这样 SPORT DMA 打开时，BCLK 和 FS 已经由 ADAU1962 送出来。SHARC2 不碰音频。
+SHARC1 被放开之后先 `XcoreSharc1Boot()`，再 `SpInit()`。这样 SPORT DMA 打开时，BCLK 和 FS 已经由 ADAU1962 送出来，控制块也已经由 ARM 写好。SHARC2 同样先挂上控制块，再安装软中断。它不碰 UART、TWI 或 SPORT。
 
 `AudioCtrlInit()` 的顺序有依赖，不能对调：
 
 ```text
 BoardPinmux → Spu0Init → Uart0Init → Tmr0Init → Sw0Init
            → SruInit → Adau19620Init → Adau19790Init → Ad24280Init
-           → 清掉 0x2003FF00 的 AudioStat
+           → Ad24281Init（脚本为空则不碰 TWI）→ XcoreArmBoot
 ```
 
 | 步骤 | 为什么在这里 |
@@ -64,7 +64,8 @@ BoardPinmux → Spu0Init → Uart0Init → Tmr0Init → Sw0Init
 | ADAU1962 | TDM 时钟主机。PLL 锁定后 `Adau1962ClkReady()` 为 1，BCLK/FS 才算可用。 |
 | ADAU1979 | SAI 从机，吃上面的 BCLK/FS。 |
 | AD24280 | 只有时钟已锁定且 TWI2 空闲才回放发现脚本。USBi 必须已经拔掉。 |
-| 清 AudioStat | 避免 ARM 在 SHARC1 发布之前读到上一次运行留下的 magic。 |
+| AD24281 | 启动会调用。表还是全 0 时直接返回，不打开 TWI。 |
+| XcoreArmBoot | 在放开 SHARC 之前把控制块和音频块清零并发布第一版参数。 |
 
 工程里没有 `adi_pwr_Init`，也没有 CGU 配置。UART 除数和 1 ms 定时器按 **SCLK0 = 125 MHz** 写死。codec 的 MCLK 是板级 **24.576 MHz**（512 × 48 kHz）。本工程不改内核时钟。
 
@@ -150,17 +151,19 @@ ADAU1962 (I2C 0x04, BCLK/FS 主机, DAI1 PB05/PB04)
 
 采样率 48 kHz。处理块是 **48 点**。缓冲是通道主序：第 `ch` 路的第 `i` 个样点在 `ptr[ch * 48 + i]`。DMA 描述符里的内存是时间主序，每个时刻连续放完全部槽，槽宽 4 字节。
 
-SPORT 组回调每收满一块就用 TRU 触发 `AudioProcess`。当前混音：
+SPORT 组回调每收满一块就用 TRU 触发 SHARC1 的音频回调。混音对齐当前 ADSP-21593：SHARC1 自己只写 DAC 0–7，DAC 8–11 来自 SHARC2 对 A2B0 前 4 个通道的处理结果。
 
 | DAC 槽 | 内容 |
 |--------|------|
-| 0–3 | 原样拷贝 ADC 槽 0–3 |
-| 4–7 | 1 kHz 满幅正弦 |
-| 8–11 | A2B0 输入槽 0、2、1、3。两根 TDM16 上相邻槽被交错取出 |
+| 0–3 | 原样拷贝 ADC 槽 0–3，再乘参数增益 0–7 |
+| 4–7 | 1 kHz 满幅正弦，再乘同一组增益 |
+| 8–11 | A2B0 输入通道 0–3，经共享块交给 SHARC2，按顺序放回。增益是参数 8–11 |
+
+第二路 A2B 的前 4 个通道走同一块共享内存的 lane 1。SHARC2 用增益 12–15（缺省是 1）处理后，SHARC1 一定把这块结果读回来。缺省寄存器表不是发现脚本，只把 SPORT5 TX 的这 4 个通道写成静音；导入表之后同一路由函数把样本写到 SPORT5，不用再改音频代码。DAC 8–11 始终只来自 A2B0，不被第二路覆盖。两路通道 4–31 留在 SHARC1 的 SPORT 缓冲里，不进共享块。
 
 SPORT1B 的时钟沿和 SPORT1A 相反，用来错开建立/保持时间。这是有意的，不是配错。
 
-CPU 负载由 SHARC1 写到 **0x2003FF00**，ARM 在监视命令 `0xCC` 时读。布局在 `arm0/src/driver/audio_stat.h` 和 `sharc1/src/driver/audio_stat.h`，两份必须一致。这块是 ARM uncached L2（`0x20025000`–`0x2003FFFF`）的最后 256 字节，链接脚本不往这里放别的数据。magic 是 `0xA5A500CC`。MCAPI 已经初始化，这条负载不用它。
+CPU 负载和参数应答在共享控制块里，ARM 在监视命令 `0xCC` 时读。地址是 `0x20038000`（控制，16 KB）和 `0x2003C000`（音频，16 KB），见 `common/xcore_abi.h`。旧的 `0x2003FF00` 落在音频窗口内部，不再单独使用。SHARC1 状态 magic 仍是 `0xA5A500CC`，SHARC2 是 `0xA5A500CD`。
 
 ---
 
@@ -224,9 +227,9 @@ DMA 描述符是 `ADI_PDMA_DESC_LIST`：`pStartAddr`、`XCount`、`XModify`、`p
 
 | 字节 | 动作 |
 |------|------|
-| `0xAA` | 读 A2B 中断和误码。第二路监视函数是空的 |
+| `0xAA` | 读 A2B 中断和误码。第二路没有脚本时只打印阻塞原因，不打开 TWI |
 | `0xBB` | 打印 UART underrun / overrun |
-| `0xCC` | 打印 SHARC1 写在 `0x2003FF00` 的负载，格式 `d.ddd` |
+| `0xCC` | 打印两颗 SHARC 的负载和参数应答，格式 `d.ddd` |
 | 其它 | 丢掉 |
 
 `Uart0Rd` 在缓冲空时也把 underrun 加 1。主循环会一直读到空，所以空闲轮询也算进 underrun。
@@ -637,13 +640,13 @@ flowchart LR
 
 #### 在 ADSP 里怎么配
 
-`Ad24280Init` 在时钟就绪且 TWI 空闲时回放 `ad24280_cfg`。`Ad2428Cfg` 按操作码调用 TWI 短写、长写、短读或延时。`Ad24280Mon` 读 INTSRC、INTTYPE、误码计数并清误码。`Ad24281Init` 不在启动路径里调用。
+`Ad24280Init` 在时钟就绪且 TWI 空闲时回放 `ad24280_cfg`。`Ad2428Cfg` 按操作码调用 TWI 短写、长写、短读或延时。`Ad24280Mon` 读 INTSRC、INTTYPE、误码计数并清误码。`Ad24281Init` 走同一个播放函数。`ad24281_reg.c` 里的缺省表过不了 `Ad24281TableIsImported()`，所以不会打开 TWI，也不能当成发现成功。以后把导出表换进这个文件，或调用 `Ad24281Bind()`，音频路由不用改。
 
 #### 当前配置
 
 只启用 AD24280。地址 `0x68` / `0x69`。表是 SigmaStudio 导出，829 条，宽度和长度都是 1，15 条延时也都是 1 字节。`val_width > 1` 会立刻停表。第一条延时（下标 1）轮询主节点运行；前一条寄存器是 `0x13` 的延时轮询从节点发现完成。
 
-AD24281（`0x6C` / `0x6D`）是空桩。载板没有第二颗主节点。SPORT5 那些 DAI1 脚仍然按遗留网络接好，没有器件响应。
+AD24281 的缺省表是 `ad24281_reg.c` 里的一条全 0 记录。头文件里的 `0x6C` / `0x6D` 只在导入表之后才交给现有的 I2C 读写。缺省时 SPORT5 前 4 个通道被消费后写成静音，共享块里的样本仍然是处理后的数据。导入真实 SigmaStudio 文件是上板待办，不是这条音频路由的软件缺口。步骤在 `doc/xcore_validation.md`。
 
 ---
 

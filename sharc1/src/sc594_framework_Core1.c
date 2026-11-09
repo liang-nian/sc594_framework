@@ -12,6 +12,7 @@
 #include <sys/platform.h>
 
 #include "sport/sport.h"
+#include "xcore/xcore_sharc1.h"
 
 /**
  * If you want to use command program arguments, then place them in the following string.
@@ -25,9 +26,12 @@ int main(int argc, char *argv[])
 
 	adi_initComponents();
 
+	/* ARM has published the control block before adi_core_enable. */
+	XcoreSharc1Boot();
 	SpInit();
 
 	while (1) {
+		XcoreSharc1Poll();
 	}
 
 	return 0;

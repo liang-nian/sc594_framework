@@ -23,6 +23,39 @@ typedef struct Ad2428Msg {
 
 static Ad2428Msg ad24280_mon = {0};
 static Ad2428Msg ad24281_mon = {0};
+static uint8_t ad24280_ran;
+static uint8_t ad24281_ran;
+static const Ad2428Reg *ad24281_active = ad24281_cfg;
+static uint32_t ad24281_active_len = AD24281_CFG_LEN;
+
+int Ad24281Bind(const Ad2428Reg *reg, uint32_t len) {
+  if (!Ad24281TableIsImported(reg, len)) {
+    ad24281_active = ad24281_cfg;
+    ad24281_active_len = AD24281_CFG_LEN;
+    ad24281_ran = 0u;
+    return 0;
+  }
+  ad24281_active = reg;
+  ad24281_active_len = len;
+  ad24281_ran = 0u;
+  return 1;
+}
+
+int Ad24281CfgImported(void) {
+  return Ad24281TableIsImported(ad24281_active, ad24281_active_len);
+}
+
+uint32_t Ad24280NodeCount(void) {
+  return ad24280_mon.node_num;
+}
+
+int Ad24280ScriptRan(void) {
+  return ad24280_ran ? 1 : 0;
+}
+
+int Ad24281ScriptRan(void) {
+  return ad24281_ran ? 1 : 0;
+}
 
 static void Ad2428CfgDelay(uint32_t delay_val) {
   volatile uint32_t delay_cnt = delay_val * TIME_BND;
@@ -146,8 +179,14 @@ void Ad24280Mon(void) {
 }
 
 void Ad24281Mon(void) {
-  /* Carrier has one A2B master. Keep the symbol, do not touch the bus. */
   (void)ad24281_mon;
+  if (!Ad24281CfgImported()) {
+    ShtLog("ad24281 default cfg: TWI idle, not a discovery.\n");
+    return;
+  }
+  Twi2Open();
+  Ad2428Mon(AD24281_MASTER_DEV, &ad24281_mon);
+  Twi2Stop();
 }
 
 void Ad24280Init(void) {
@@ -165,8 +204,29 @@ void Ad24280Init(void) {
   Twi2Open();
   Ad2428Cfg(AD24280_MASTER_DEV, ad24280_cfg, AD24280_CFG_LEN, &ad24280_mon);
   Twi2Stop();
+  ad24280_ran = 1u;
 }
 
 void Ad24281Init(void) {
-  ShtLog("ad24281 skipped: no 2nd A2B on EV-SOMCRR-EZKIT.\n");
+  if (!Ad24281CfgImported()) {
+    ad24281_ran = 0u;
+    ShtLog("ad24281 default cfg: no I2C, SPORT5 TX stays muted.\n");
+    ShtLog("ad24281 default cfg: len %u. Import a script to use the same path.\n",
+           (unsigned)ad24281_active_len);
+    return;
+  }
+  if (!Adau1962ClkReady()) {
+    ShtLog("ad24281 imported cfg not sent: dac bclk/fs not locked.\n");
+    return;
+  }
+  if (!Twi2IsIdle()) {
+    ShtLog("ad24281 imported cfg not sent: twi2 busy.\n");
+    return;
+  }
+  Twi2Open();
+  Ad2428Cfg(AD24281_MASTER_DEV, (Ad2428Reg *)ad24281_active, ad24281_active_len,
+            &ad24281_mon);
+  Twi2Stop();
+  ad24281_ran = 1u;
+  ShtLog("ad24281 imported cfg sent. Node count is not a discovery result yet.\n");
 }

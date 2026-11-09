@@ -72,12 +72,15 @@ MEMORY
   /* #### ARM L2 Memory ################################################## */
 
   /* ARM Core 0 L2 RAM, uncached.
-   * The last 256 bytes (0x2003FF00..0x2003FFFF) are reserved for the
-   * SHARC1 audio-status block. See common/audio_stat.h. The MMU window
-   * in apt.c still covers the whole 108KB as uncached.
+   * 0x20038000..0x2003FFFF is the cross-core control and audio window
+   * (common/xcore_abi.h). apt.c still maps 0x20025000..0x2003FFFF
+   * ADI_MMU_RW_UNCACHED, so this split does not change the page table.
+   * UART DMA stays in MEM_L2_UNCACHED. SHARC images must not place
+   * objects here; see sharc1/system/startup_ldf/xcore_reserve.mem.
    */
-  MEM_L2_UNCACHED : ORIGIN = 0x20025000, LENGTH = (108K - 256)
-  MEM_L2_AUDIO_STAT : ORIGIN = 0x2003FF00, LENGTH = 256
+  MEM_L2_UNCACHED : ORIGIN = 0x20025000, LENGTH = 0x13000
+  MEM_L2_XCORE_CTRL : ORIGIN = 0x20038000, LENGTH = 0x4000
+  MEM_L2_XCORE_AUDIO : ORIGIN = 0x2003C000, LENGTH = 0x4000
 
   /* ARM Core 0 L2 RAM, cached */
   MEM_L2_CACHED : ORIGIN = 0x20040000, LENGTH = 768K
@@ -131,7 +134,11 @@ SECTIONS {
   __l2_start = 0x20000000 ;
   __l2_end = 0x201FFFFF ;
   __l2_uncached_start = ORIGIN(MEM_L2_MCAPI_DATA_CORE0) ;
-  __l2_uncached_end = ORIGIN(MEM_L2_AUDIO_STAT) + LENGTH(MEM_L2_AUDIO_STAT) - 1 ;
+  __l2_uncached_end = ORIGIN(MEM_L2_XCORE_AUDIO) + LENGTH(MEM_L2_XCORE_AUDIO) - 1 ;
+  __xcore_ctrl_start = ORIGIN(MEM_L2_XCORE_CTRL) ;
+  __xcore_ctrl_end = ORIGIN(MEM_L2_XCORE_CTRL) + LENGTH(MEM_L2_XCORE_CTRL) - 1 ;
+  __xcore_audio_start = ORIGIN(MEM_L2_XCORE_AUDIO) ;
+  __xcore_audio_end = ORIGIN(MEM_L2_XCORE_AUDIO) + LENGTH(MEM_L2_XCORE_AUDIO) - 1 ;
   __l2_cached_start = ORIGIN(MEM_L2_CACHED) ;
   __l2_cached_end = ORIGIN(MEM_L2_CORE1) + LENGTH(MEM_L2_CORE1) - 1 ;
 }
@@ -226,14 +233,19 @@ SECTIONS
     *(.l2_uncached_data)
   } >MEM_L2_UNCACHED = 0
 
-  /* Reserved tail of the uncached L2 window. SHARC1 writes AudioStat here.
-   * NOLOAD: ARM clears it at runtime in AudioCtrlInit(). */
-  .audio_stat (NOLOAD) :
+  /* NOLOAD: ARM clears both windows in XcoreArmReset() before the
+   * SHARC cores are enabled. No other output section owns these bytes. */
+  .xcore_ctrl (NOLOAD) :
   {
-    __audio_stat_start = .;
-    . = . + LENGTH(MEM_L2_AUDIO_STAT);
-    __audio_stat_end = .;
-  } >MEM_L2_AUDIO_STAT = 0
+    __xcore_ctrl_noload = .;
+    . = . + LENGTH(MEM_L2_XCORE_CTRL);
+  } >MEM_L2_XCORE_CTRL = 0
+
+  .xcore_audio (NOLOAD) :
+  {
+    __xcore_audio_noload = .;
+    . = . + LENGTH(MEM_L2_XCORE_AUDIO);
+  } >MEM_L2_XCORE_AUDIO = 0
 
   /* L2 cached section:
   ** Place any objects explicitly required to be cached in L2. */

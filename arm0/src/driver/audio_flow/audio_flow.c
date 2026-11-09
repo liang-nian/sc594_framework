@@ -1,5 +1,5 @@
-#include "audio_stat.h"
 #include "audio_flow.h"
+#include "xcore/xcore_arm.h"
 #include "ad2428/ad2428.h"
 #include "adau1962/adau1962.h"
 #include "adau1979/adau1979.h"
@@ -15,7 +15,9 @@
  *
  * Order is the 21593 order with SPORT DMA removed (that starts on SHARC1
  * only after adi_core_enable, so clocks already exist):
- *   pinmux, SPU, UART, timer, U6 switch, SRU, ADAU1962, ADAU1979, AD24280.
+ *   pinmux, SPU, UART, timer, U6 switch, SRU, ADAU1962, ADAU1979,
+ *   AD24280, AD24281 (no TWI while its script is empty), then the
+ *   shared control block. SHARC cores are enabled after this returns.
  * UART RX DMA is armed before TMR0. The 1 ms callback is Uart0Poll.
  *
  * USBi / A2B rule: BCLK and FS must be running before any A2B I2C, and the
@@ -25,14 +27,6 @@
  * Do not attach USBi during this boot path. To capture a new SigmaStudio
  * script, stop before Ad24280Init(), confirm clocks, then plug USBi in.
  */
-static void AudioStatClear(void) {
-  AudioStat *st = (AudioStat *)AUDIO_STAT_ADDR;
-  st->cpu_load = 0.f;
-  st->max_cpu_load = 0.f;
-  st->ave_cpu_load = 0.f;
-  st->magic = 0u;
-}
-
 void AudioCtrlInit(void) {
   BoardPinmux();
   Spu0Init();
@@ -43,6 +37,9 @@ void AudioCtrlInit(void) {
   Adau19620Init();
   Adau19790Init();
   Ad24280Init();
-  /* Ad24281Init() stays uncalled: EV-SOMCRR-EZKIT has no second A2B. */
-  AudioStatClear();
+  /* Returns before any TWI access while ad24281_cfg is the empty stub.
+   * SPORT5 is already routed and is started later on SHARC1. */
+  Ad24281Init();
+  XcoreArmBoot(Ad24280NodeCount(), Ad24280ScriptRan(), Ad24281CfgImported(),
+               Ad24281ScriptRan());
 }
