@@ -44,6 +44,11 @@ int XcoreAudioReadOut(XcoreAudio *audio, uint32_t slot, uint32_t even_seq,
 
 void XcoreMapLaneToDac(float *dac, uint32_t dac_ch, const float *lane);
 void XcoreMapLaneToTx(float *tx, const float *lane);
+/* Lane 0 always feeds DAC channels 8-11. Lane 1 is always the SPORT5
+ * consumer: tx_mute replaces that copy with silence and does not skip
+ * the read. Channels past the 4-channel lane are left unchanged. */
+void XcoreRouteOutputs(float *dac, float *a2b1_tx, const float *lane0,
+                       const float *lane1, uint32_t tx_mute);
 
 void XcoreWriteStat(XcoreCtrl *ctrl, uint32_t core, const XcoreDspStat *stat);
 int XcoreReadStat(XcoreCtrl *ctrl, uint32_t core, XcoreDspStat *stat);

@@ -33,7 +33,7 @@ Twelve firmware defects were fixed. Two of them also stopped the Debug build (`N
 
 - `log.c` `ShtLog` already includes `<stdarg.h>` / `<stdio.h>` and refuses a `vsnprintf` result that does not fit in the 128-byte buffer. Callers of `ShtLog` already include `log/log.h`.
 - `UART0_RXDMA_XCNT_CUR` is a DFP address macro in this SC594 pack. `uart.c` compiled with it. UART0 RX remains DMA channel 21. It was not rewritten to `pREG_DMA21_XCNT_CUR`.
-- `AD24281` still has no SigmaStudio script. `Ad24281Init` is on the boot path and returns before TWI while `ad24281_cfg` is the zero stub. SPORT5 DMA is in the shared audio path. See `doc/xcore_validation.md`.
+- `AD24281` ships a replaceable default table, not a SigmaStudio export. `Ad24281Init` does not open TWI for that table. SPORT5 still consumes the shared lane and writes silence. See `doc/xcore_validation.md`.
 - `CMAP12 = 0x01` and `CMAP34 = 0x23` swap adjacent channels versus reset. Not proven wrong.
 - A full lap of the UART ring that lands back on the old index is still invisible to `overrun_cnt`.
 - `Uart0Rd` increments `underrun_cnt` on an empty buffer. `MonTmp` loops until empty, so the counter includes idle polls.
@@ -91,7 +91,7 @@ The ARM makefile emits the image as `arm0` with no `.dxe` suffix. That is the ge
 
 - `log.c` 的 `ShtLog` 已经包含 `<stdarg.h>` / `<stdio.h>`，`vsnprintf` 的结果放不进 128 字节缓冲时不发送。调用 `ShtLog` 的文件已经包含 `log/log.h`。
 - 本机 SC594 DFP 里 `UART0_RXDMA_XCNT_CUR` 是地址宏，`uart.c` 能编过。UART0 RX 仍是 DMA21。没有改成 `pREG_DMA21_XCNT_CUR`。
-- `AD24281` 仍然没有 SigmaStudio 脚本。`Ad24281Init` 已在启动路径上，表还是全 0 时不会打开 TWI。SPORT5 DMA 已进入共享音频路径。见 `doc/xcore_validation.md`。
+- `AD24281` 自带可替换的缺省表，不是 SigmaStudio 导出。缺省表不会打开 TWI。SPORT5 仍消费共享车道，出口写静音。见 `doc/xcore_validation.md`。
 - `CMAP12 = 0x01`、`CMAP34 = 0x23` 相对复位值交换了相邻通道，没有证据说明这是错的。
 - UART 环整圈后停在旧下标时，`overrun_cnt` 仍然看不出来。
 - `Uart0Rd` 在缓冲空时增加 `underrun_cnt`。`MonTmp` 一直读到空，所以计数包含空闲轮询。

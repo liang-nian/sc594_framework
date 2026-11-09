@@ -49,17 +49,30 @@ typedef struct Ad2428Reg {
 extern Ad2428Reg ad24280_cfg[AD24280_CFG_LEN];
 
 /*
- * Dev1 (AD24281): second A2B path — NOT present on EV-SOMCRR-EZKIT
- * (the carrier used by both the 21593 EZ-KIT and the SC594 EZ-KIT).
+ * Dev1 (AD24281): replaceable second-A2B register table.
  *
- * The carrier has a single A2B master. AD24281_* and ad24281_cfg stay empty
- * stubs so call sites compile. Do not treat them as a second bus.
+ * ad24281_cfg in ad24281_reg.c is the default placeholder, not a
+ * SigmaStudio export and not evidence that a second transceiver was
+ * discovered. A later import replaces that file (and AD24281_CFG_LEN)
+ * or calls Ad24281Bind(). The SPORT route does not change.
+ *
+ * 0x6C / 0x6D are only used after a table passes Ad24281TableIsImported().
  */
 #define AD24281_MASTER_DEV    (0x6Cu)
 #define AD24281_SLAVE_DEV     (0x6Du)
 #define AD24281_CFG_LEN       (1u)
 
 extern Ad2428Reg ad24281_cfg[AD24281_CFG_LEN];
+
+static inline int Ad24281TableIsImported(const Ad2428Reg *reg, uint32_t len) {
+  if (reg == 0 || len < 2u) {
+    return 0;
+  }
+  if (reg[0].dev == 0u) {
+    return 0;
+  }
+  return 1;
+}
 
 #ifdef __cplusplus
 } // extern "C"

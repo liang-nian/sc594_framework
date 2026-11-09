@@ -25,8 +25,8 @@ python3 host/check_map.py
 - `XcoreArmReset` 之后旧应答和音频槽序号都回到 0，必须重新挂接再发布。
 - 音频两槽回绕、`0xFFFFFFFE` 之后的下一偶数序号、过期序号读不回来。
 - 发布方先写回样本，再写回偶数 `seq`。
-- A2B0 的 4 个通道按 21593 的方式放到 DAC 通道 8 起，不改 DAC 通道 0。A2B1 只写 TX 前 4 个通道。
-- `ad24281_cfg` 仍是一条 `dev == 0` 的记录。
+- A2B0 的 4 个通道按 21593 的方式放到 DAC 通道 8 起，不改 DAC 通道 0。缺省时第二路共享结果仍非 0，SPORT5 前 4 通道写静音；同一路由在 mute 清掉后把该结果写到 SPORT5，且不改 DAC 8–11。通道 4 之后的 TX 尾部保持不动。
+- 缺省 `ad24281_cfg` 不是导入表。两条 `dev` 非 0 的记录才会被 `Ad24281TableIsImported()` 接受。
 
 `check_map.py` 核对 `arm0/system/linker/app.ld` 的 `MEM_L2_XCORE_CTRL` / `MEM_L2_XCORE_AUDIO` 与 `common/xcore_abi.h` 一致，并且旧的 `MEM_L2_AUDIO_STAT` 已经不在链接脚本里。
 
@@ -54,20 +54,22 @@ make -C sharc2/Debug -j8 all
 1. UART 命令 `0xCC`。应看到参数 generation，以及 SHARC1、SHARC2 各自的 ack。两颗 DSP 都起来之后，两个 ack 应等于 generation。只看到其中一个时，不要当成两颗都收到了。
 2. 同一条命令里的负载。SHARC1 magic `0xA5A500CC`，SHARC2 magic `0xA5A500CD`。SHARC2 一直“尚未发布”时，优先看 `INTR_SYS_SOFT0_INT` 是不是只进了 SHARC2。SHARC1 的音频回调有 200000 周期上限（1 GHz 下约 0.2 ms），超时会计 miss，不会一直卡在回调里。
 3. DAC 0–3 仍是 ADC 回环，4–7 仍是 1 kHz。DAC 8–11 应是 A2B0 通道 0、1、2、3 经 SHARC2 后的结果，顺序与 21593 相同，不再是以前的 0、2、1、3 交错。
-4. 命令 `0xAA`。AD24280 仍走 TWI 监视。AD24281 在脚本为空时只打印阻塞原因，不打开 TWI。
+4. 命令 `0xAA`。AD24280 仍走 TWI 监视。缺省 AD24281 只打印 `default cfg`，不打开 TWI，也不表示发现成功。
+5. 示波器或 DAC 上，第二路不应改变 DAC 8–11。缺省时 SPORT5 前 4 个槽是静音。导入表并重新编译后，同一槽应出现 A2B1 通道 0–3 经 SHARC2 后的样本。
 
-## 第二路 A2B 没有在板上接通
+## 第二路音频路由
 
-已经接上的部分，依据都在仓库里：
+两条车道都是 4 通道，和 21593 交给 SHARC2 的宽度一样。
 
-- SPORT5A/B、DAI1 PB19/PB10/PB11/PB07、时钟 PB08/PB09，见 `arm0/src/driver/sru/signal_route.c`。
-- SPU id 73/74，见 `arm0/src/driver/spu/spu.c`。
-- DMA 与全局 SPORT 组，见 `sharc1/src/driver/sport/sport.c`。通道 0–3 进入共享音频 lane 1。
+| 共享车道 | 来源 | 谁处理 | 消费到哪里 |
+|----------|------|--------|------------|
+| lane 0 | A2B0 通道 0–3（SPORT1） | SHARC2，增益 8–11，缺省 1 | DAC 通道 8–11。这是 21593 的路由，第二路不改它 |
+| lane 1 | A2B1 通道 0–3（SPORT5 RX） | SHARC2，增益 12–15，缺省 1 | SHARC1 先读回共享结果。`a2b1_tx_mute == 1` 时 SPORT5 TX 前 4 通道写 0；导入配置后同一函数把样本写出去 |
 
-没有做、也不能声称已经工作的部分：
+A2B0 / A2B1 的通道 4–31 只留在 SHARC1 的 SPORT 浮点缓冲里，没有放进共享块，所以不是“没人消费的共享音频”。共享块里的 8 个通道都会被读走。A2B0 的 TX（`a2b0_out`）和 21593 一样不由这条路由填充。
 
-- `doc/sc594_framework.md` 和上游 `ad2428.h` 都写明 EV-SOMCRR-EZKIT 只有一颗 AD2428（AD24280）。
-- `arm0/src/driver/ad2428/ad24281_reg.c` 的表长是 1，唯一记录是 0。`Ad24281Init` 在 `dev == 0` 或表长小于 2 时直接返回。
-- 头文件里的 `0x6C` / `0x6D` 没有对应的发现脚本，启动代码不会向这个地址发起传输。
+缺省表是 `arm0/src/driver/ad2428/ad24281_reg.c` 的一条全 0 记录。`Ad24281TableIsImported()` 拒绝它。`Ad24281Init` 不打开 TWI，`a2b1_link` 是 `DEFAULT`，`a2b1_tx_mute` 是 1，`a2b1_nodes` 保持 0。这不是发现成功。
 
-要让第二颗收发器真正进发现流程，需要一块实际焊上或插上的第二颗 AD2428，以及它的 SigmaStudio 导出（主节点地址、`ad24281_cfg` 长度至少 2，且第一条 `dev` 不是 0）。在那之前，控制块里的 `a2b1_link` 是 `BLOCKED`，`a2b1_block` 是 `NO_SCRIPT`，lane 1 的增益是 0。
+导入时替换该文件和 `AD24281_CFG_LEN`，或调用 `Ad24281Bind()`。表长至少 2 且第一条 `dev` 不是 0 才算导入。播放仍是原来的 `Ad2428Cfg` I2C 读写。音频路由函数不用改。`a2b1_link == UP` 只表示脚本已经交给 TWI，不表示从节点已经应答。
+
+上板还要做的事：准备第二颗 AD2428 和它的 SigmaStudio 导出，再确认 SPORT5 出口从静音变成该导出对应的音频。这是硬件 bring-up，不是这次软件路由的缺口。

@@ -25,17 +25,24 @@ static Ad2428Msg ad24280_mon = {0};
 static Ad2428Msg ad24281_mon = {0};
 static uint8_t ad24280_ran;
 static uint8_t ad24281_ran;
+static const Ad2428Reg *ad24281_active = ad24281_cfg;
+static uint32_t ad24281_active_len = AD24281_CFG_LEN;
 
-int Ad24281ScriptReady(void) {
-  /* A real SigmaStudio export has a master address and more than the
-   * placeholder record. The zero entry in ad24281_reg.c is not a script. */
-  if (AD24281_CFG_LEN < 2u) {
+int Ad24281Bind(const Ad2428Reg *reg, uint32_t len) {
+  if (!Ad24281TableIsImported(reg, len)) {
+    ad24281_active = ad24281_cfg;
+    ad24281_active_len = AD24281_CFG_LEN;
+    ad24281_ran = 0u;
     return 0;
   }
-  if (ad24281_cfg[0].dev == 0u) {
-    return 0;
-  }
+  ad24281_active = reg;
+  ad24281_active_len = len;
+  ad24281_ran = 0u;
   return 1;
+}
+
+int Ad24281CfgImported(void) {
+  return Ad24281TableIsImported(ad24281_active, ad24281_active_len);
 }
 
 uint32_t Ad24280NodeCount(void) {
@@ -172,10 +179,9 @@ void Ad24280Mon(void) {
 }
 
 void Ad24281Mon(void) {
-  /* Do not open TWI2. There is no second transceiver script to read. */
   (void)ad24281_mon;
-  if (!Ad24281ScriptReady()) {
-    ShtLog("ad24281 mon blocked: no script, TWI not opened.\n");
+  if (!Ad24281CfgImported()) {
+    ShtLog("ad24281 default cfg: TWI idle, not a discovery.\n");
     return;
   }
   Twi2Open();
@@ -202,25 +208,25 @@ void Ad24280Init(void) {
 }
 
 void Ad24281Init(void) {
-  if (!Ad24281ScriptReady()) {
+  if (!Ad24281CfgImported()) {
     ad24281_ran = 0u;
-    ShtLog("ad24281 blocked: EV-SOMCRR-EZKIT has one AD2428.\n");
-    ShtLog("ad24281 blocked: cfg len %u, first dev is 0, TWI left idle.\n",
-           (unsigned)AD24281_CFG_LEN);
-    ShtLog("ad24281 blocked: SPORT5 DMA is up, 0x%02x is not probed.\n",
-           (unsigned)AD24281_MASTER_DEV);
+    ShtLog("ad24281 default cfg: no I2C, SPORT5 TX stays muted.\n");
+    ShtLog("ad24281 default cfg: len %u. Import a script to use the same path.\n",
+           (unsigned)ad24281_active_len);
     return;
   }
   if (!Adau1962ClkReady()) {
-    ShtLog("ad24281 skipped: dac bclk/fs not locked.\n");
+    ShtLog("ad24281 imported cfg not sent: dac bclk/fs not locked.\n");
     return;
   }
   if (!Twi2IsIdle()) {
-    ShtLog("ad24281 skipped: twi2 busy.\n");
+    ShtLog("ad24281 imported cfg not sent: twi2 busy.\n");
     return;
   }
   Twi2Open();
-  Ad2428Cfg(AD24281_MASTER_DEV, ad24281_cfg, AD24281_CFG_LEN, &ad24281_mon);
+  Ad2428Cfg(AD24281_MASTER_DEV, (Ad2428Reg *)ad24281_active, ad24281_active_len,
+            &ad24281_mon);
   Twi2Stop();
   ad24281_ran = 1u;
+  ShtLog("ad24281 imported cfg sent. Node count is not a discovery result yet.\n");
 }

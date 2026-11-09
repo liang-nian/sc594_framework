@@ -24,7 +24,7 @@ static void GainsDefault(void) {
   for (b = 0; b < 2u; ++b) {
     for (c = 0; c < XCORE_LANE_CH; ++c) {
       gain_bank[b][0][c] = 1.f;
-      gain_bank[b][1][c] = 0.f;
+      gain_bank[b][1][c] = 1.f;
     }
   }
   gain_pub = 0u;

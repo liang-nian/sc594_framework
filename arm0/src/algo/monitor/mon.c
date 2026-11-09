@@ -32,7 +32,8 @@ static void CpuMsgMon(void) {
          (unsigned)XcoreArmPublished(),
          (unsigned)XcoreArmAck(1u),
          (unsigned)XcoreArmAck(2u));
-  ShtLog("a2b1 block %u\n", (unsigned)XcoreArmA2b1Block());
+  ShtLog("a2b1 cfg %u mute %u\n", (unsigned)XcoreArmA2b1Cfg(),
+         (unsigned)XcoreArmA2b1Mute());
   if (XcoreArmReadStat(1u, &sh1) != 0) {
     ShtLog("cpu load: sharc1 has not published yet.\n");
   } else {

@@ -8,6 +8,7 @@ static XcoreAudio *const audio = (XcoreAudio *)XCORE_AUDIO_ADDR;
 static uint32_t epoch;
 static uint32_t frame_index;
 static float gain_bank[2][XCORE_GAIN_SHARC1_N];
+static uint32_t mute_bank[2];
 static volatile uint32_t gain_pub;
 static int attached;
 static float pull_lane0[XCORE_LANE_CH * XCORE_FRAME_LEN];
@@ -19,6 +20,8 @@ static void GainsDefault(void) {
     gain_bank[0][i] = 1.f;
     gain_bank[1][i] = 1.f;
   }
+  mute_bank[0] = 1u;
+  mute_bank[1] = 1u;
   gain_pub = 0u;
 }
 
@@ -28,6 +31,7 @@ static void ApplyImage(const XcoreParamImage *image) {
   for (i = 0; i < XCORE_GAIN_SHARC1_N; ++i) {
     gain_bank[next][i] = image->gain[XCORE_GAIN_SHARC1 + i];
   }
+  mute_bank[next] = image->a2b1_tx_mute;
   /* Keep the bank stores ahead of the index the audio callback reads.
    * The bank is core-local; do not flush it as shared L2. */
   XcoreBarrier();
@@ -106,8 +110,8 @@ int XcoreSharc1Pull(uint32_t slot, uint32_t seq, float *dac, float *a2b1_out) {
   if (rc != XCORE_OK) {
     return rc;
   }
-  XcoreMapLaneToDac(dac, XCORE_DAC_LANE0_CH, pull_lane0);
-  XcoreMapLaneToTx(a2b1_out, pull_lane1);
+  XcoreRouteOutputs(dac, a2b1_out, pull_lane0, pull_lane1,
+                    mute_bank[gain_pub & 1u]);
   return XCORE_OK;
 }
 

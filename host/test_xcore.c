@@ -115,15 +115,16 @@ static void test_params(void) {
                 XCORE_FLAG_A2B1_SPORT;
   image.a2b0_link = XCORE_A2B_LINK_UP;
   image.a2b0_nodes = 12u;
-  image.a2b1_link = XCORE_A2B_LINK_BLOCKED;
-  image.a2b1_block = XCORE_A2B1_BLOCK_NO_SCRIPT;
+  image.a2b1_link = XCORE_A2B_LINK_DEFAULT;
+  image.a2b1_cfg = XCORE_A2B1_CFG_DEFAULT;
+  image.a2b1_tx_mute = 1u;
   image.sport_a2b0_dev = XCORE_SPORT_A2B0;
   image.sport_a2b1_dev = XCORE_SPORT_A2B1;
   image.dac_lane0_ch = XCORE_DAC_LANE0_CH;
   image.lane_count = XCORE_LANE_COUNT;
   image.frame_len = XCORE_FRAME_LEN;
   for (i = 0; i < XCORE_GAIN_NUM; ++i) {
-    image.gain[i] = (i < XCORE_GAIN_LANE1) ? 1.f : 0.f;
+    image.gain[i] = 1.f;
   }
 
   CHECK(XcoreAttach(ctrl, XCORE_CORE_SHARC1) == XCORE_ERR_NOT_READY);
@@ -157,9 +158,10 @@ static void test_params(void) {
   CHECK(XcoreAttach(ctrl, XCORE_CORE_SHARC2) == XCORE_OK);
   CHECK(XcorePoll(ctrl, XCORE_CORE_SHARC1, &got1) == XCORE_OK);
   CHECK(got1.a2b0_nodes == 12u);
-  CHECK(got1.a2b1_block == XCORE_A2B1_BLOCK_NO_SCRIPT);
+  CHECK(got1.a2b1_cfg == XCORE_A2B1_CFG_DEFAULT);
+  CHECK(got1.a2b1_tx_mute == 1u);
   CHECK(got1.gain[0] == 1.f);
-  CHECK(got1.gain[12] == 0.f);
+  CHECK(got1.gain[12] == 1.f);
   CHECK(XcoreAckGeneration(ctrl, XCORE_CORE_SHARC1) == 1u);
   CHECK(XcoreAckGeneration(ctrl, XCORE_CORE_SHARC2) == 0u);
 
@@ -282,10 +284,60 @@ static void test_audio(void) {
   free(audio);
 }
 
+static void test_a2b1_route(void) {
+  float lane0[XCORE_LANE_CH * XCORE_FRAME_LEN];
+  float lane1[XCORE_LANE_CH * XCORE_FRAME_LEN];
+  float processed0[XCORE_LANE_CH * XCORE_FRAME_LEN];
+  float processed1[XCORE_LANE_CH * XCORE_FRAME_LEN];
+  float dac[16u * XCORE_FRAME_LEN];
+  float tx[8u * XCORE_FRAME_LEN];
+  float tail;
+  uint32_t i;
+  Ad2428Reg imported[2];
+
+  fill_lane(lane0, 3.f);
+  fill_lane(lane1, 7.f);
+  for (i = 0; i < XCORE_LANE_CH * XCORE_FRAME_LEN; ++i) {
+    processed0[i] = lane0[i] * 1.f;
+    processed1[i] = lane1[i] * 1.f;
+  }
+  memset(dac, 0, sizeof(dac));
+  dac[0] = 42.f;
+  memset(tx, 0, sizeof(tx));
+  tx[XCORE_LANE_CH * XCORE_FRAME_LEN] = 9.f;
+  tail = tx[XCORE_LANE_CH * XCORE_FRAME_LEN];
+
+  XcoreRouteOutputs(dac, tx, processed0, processed1, 1u);
+  CHECK(dac[0] == 42.f);
+  CHECK(dac[XCORE_DAC_LANE0_CH * XCORE_FRAME_LEN] == processed0[0]);
+  CHECK(dac[7u * XCORE_FRAME_LEN] == 0.f);
+  CHECK(tx[0] == 0.f);
+  CHECK(tx[XCORE_LANE_CH * XCORE_FRAME_LEN - 1u] == 0.f);
+  CHECK(tx[XCORE_LANE_CH * XCORE_FRAME_LEN] == tail);
+  CHECK(processed1[0] == 7.f);
+
+  XcoreRouteOutputs(dac, tx, processed0, processed1, 0u);
+  CHECK(dac[0] == 42.f);
+  CHECK(dac[XCORE_DAC_LANE0_CH * XCORE_FRAME_LEN] == processed0[0]);
+  CHECK(tx[0] == processed1[0]);
+  CHECK(tx[XCORE_LANE_CH * XCORE_FRAME_LEN - 1u] ==
+        processed1[XCORE_LANE_CH * XCORE_FRAME_LEN - 1u]);
+  CHECK(tx[XCORE_LANE_CH * XCORE_FRAME_LEN] == tail);
+
+  memset(&imported, 0, sizeof(imported));
+  CHECK(Ad24281TableIsImported(ad24281_cfg, AD24281_CFG_LEN) == 0);
+  CHECK(Ad24281TableIsImported(imported, 2u) == 0);
+  imported[0].dev = AD24281_MASTER_DEV;
+  imported[1].dev = AD24281_SLAVE_DEV;
+  CHECK(Ad24281TableIsImported(imported, 2u) == 1);
+  CHECK(Ad24281TableIsImported(imported, 1u) == 0);
+}
+
 int main(void) {
   test_layout();
   test_params();
   test_audio();
+  test_a2b1_route();
   if (failures != 0) {
     fprintf(stderr, "%d checks failed\n", failures);
     return 1;

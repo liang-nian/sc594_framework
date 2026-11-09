@@ -469,6 +469,25 @@ void XcoreMapLaneToTx(float *tx, const float *lane) {
   memcpy(tx, lane, sizeof(float) * XCORE_LANE_CH * XCORE_FRAME_LEN);
 }
 
+void XcoreRouteOutputs(float *dac, float *a2b1_tx, const float *lane0,
+                       const float *lane1, uint32_t tx_mute) {
+  uint32_t i;
+
+  if (lane0 != NULL) {
+    XcoreMapLaneToDac(dac, XCORE_DAC_LANE0_CH, lane0);
+  }
+  if (a2b1_tx == NULL || lane1 == NULL) {
+    return;
+  }
+  if (tx_mute) {
+    for (i = 0; i < XCORE_LANE_CH * XCORE_FRAME_LEN; ++i) {
+      a2b1_tx[i] = 0.f;
+    }
+    return;
+  }
+  XcoreMapLaneToTx(a2b1_tx, lane1);
+}
+
 void XcoreWriteStat(XcoreCtrl *ctrl, uint32_t core, const XcoreDspStat *stat) {
   XcoreDspStat *dst;
 

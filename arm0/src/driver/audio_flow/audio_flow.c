@@ -40,5 +40,6 @@ void AudioCtrlInit(void) {
   /* Returns before any TWI access while ad24281_cfg is the empty stub.
    * SPORT5 is already routed and is started later on SHARC1. */
   Ad24281Init();
-  XcoreArmBoot(Ad24280NodeCount(), Ad24280ScriptRan(), Ad24281ScriptRan());
+  XcoreArmBoot(Ad24280NodeCount(), Ad24280ScriptRan(), Ad24281CfgImported(),
+               Ad24281ScriptRan());
 }

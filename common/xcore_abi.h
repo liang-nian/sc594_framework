@@ -70,12 +70,14 @@
 #define XCORE_UNCHANGED        (10)
 
 #define XCORE_A2B_LINK_OFF     (0u)
+/* Script bytes were handed to the existing TWI player. Not "nodes found". */
 #define XCORE_A2B_LINK_UP      (1u)
-#define XCORE_A2B_LINK_BLOCKED (2u)
+/* Placeholder table is selected. The audio route still runs. */
+#define XCORE_A2B_LINK_DEFAULT (2u)
 
-#define XCORE_A2B1_BLOCK_NONE  (0u)
-/* EV-SOMCRR-EZKIT has one AD2428. ad24281_cfg is a one-entry zero stub. */
-#define XCORE_A2B1_BLOCK_NO_SCRIPT (1u)
+#define XCORE_A2B1_CFG_IMPORTED (0u)
+/* ad24281_cfg is the replaceable default, not a SigmaStudio export. */
+#define XCORE_A2B1_CFG_DEFAULT  (1u)
 
 #define XCORE_FLAG_STREAM_RUN  (1u << 0)
 #define XCORE_FLAG_A2B0_SPORT  (1u << 1)
@@ -126,7 +128,7 @@ typedef struct XcoreParamImage {
   uint32_t a2b0_link;
   uint32_t a2b0_nodes;
   uint32_t a2b1_link;
-  uint32_t a2b1_block;
+  uint32_t a2b1_cfg;
   uint32_t a2b1_nodes;
   uint32_t sport_a2b0_dev;
   uint32_t sport_a2b1_dev;
@@ -137,7 +139,9 @@ typedef struct XcoreParamImage {
   uint32_t gain_lane0_base;
   uint32_t gain_lane1_base;
   float gain[XCORE_GAIN_NUM];
-  uint32_t reserved[14];
+  /* 1: SHARC1 still reads lane 1, then writes silence to SPORT5 TX. */
+  uint32_t a2b1_tx_mute;
+  uint32_t reserved[13];
 } XcoreParamImage;
 
 typedef struct XcoreParamSlot {
